@@ -1,0 +1,8 @@
+#!/bin/sh
+# `ufw enable` needs a real kernel/netfilter stack, which isn't available
+# inside the chroot at build time. So we ship a first-boot oneshot unit
+# (ufw-enable.service, installed via includes.chroot) that runs it for real
+# the first time the live system actually boots.
+set -e
+systemctl enable ufw-enable.service || true
+echo "[hook] ufw-enable.service scheduled for first real boot."

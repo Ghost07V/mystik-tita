@@ -1,0 +1,14 @@
+[Unit]
+Description=Detect boot mode (daily driver vs anonymous) and configure networking
+DefaultDependencies=no
+Before=network-pre.target NetworkManager.service
+Wants=network-pre.target
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/mode-init
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

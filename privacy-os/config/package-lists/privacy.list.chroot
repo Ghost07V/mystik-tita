@@ -1,0 +1,9 @@
+tor
+torbrowser-launcher
+torsocks
+ufw
+apparmor
+apparmor-profiles
+apparmor-utils
+unattended-upgrades
+fail2ban

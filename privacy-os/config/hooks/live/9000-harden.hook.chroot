@@ -1,0 +1,37 @@
+#!/bin/sh
+# Runs inside the chroot during build. Applies baseline hardening that
+# should be active no matter which boot mode (daily / anon) is chosen.
+set -e
+
+echo "[hook] Applying baseline kernel/network hardening..."
+
+cat > /etc/sysctl.d/99-hardening.conf <<'EOF'
+kernel.kptr_restrict = 2
+kernel.dmesg_restrict = 1
+kernel.yama.ptrace_scope = 2
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv4.conf.all.send_redirects = 0
+net.ipv6.conf.all.accept_redirects = 0
+net.ipv4.conf.all.accept_source_route = 0
+net.ipv4.tcp_syncookies = 1
+fs.protected_hardlinks = 1
+fs.protected_symlinks = 1
+EOF
+
+# Default firewall policy (the actual `ufw enable` is deferred to first boot
+# via ufw-enable.service below -- running it inside the chroot during build
+# fails because there is no live kernel/netfilter stack available yet).
+mkdir -p /etc/ufw
+cat > /etc/default/ufw <<'EOF'
+ENABLED=yes
+DEFAULT_INPUT_POLICY="DROP"
+DEFAULT_OUTPUT_POLICY="ACCEPT"
+DEFAULT_FORWARD_POLICY="DROP"
+EOF
+
+# Enable (don't start) the services we want active at boot.
+systemctl enable apparmor || true
+systemctl enable unattended-upgrades || true
+systemctl enable fail2ban || true
+
+echo "[hook] Hardening applied."

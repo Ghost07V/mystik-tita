@@ -1,0 +1,34 @@
+# config/bootloaders/isolinux/live.cfg.in  (EXAMPLE — see README)
+#
+# live-build generates its own isolinux/grub menus from a template that
+# ships with the live-build package itself (location varies by version,
+# typically under /usr/share/live/build/bootloaders/isolinux/). To get
+# TWO custom boot entries instead of the default single one:
+#
+#   1. Find the matching template live-build installed on your system, e.g.:
+#        find /usr/share/live/build -iname '*.cfg*'
+#   2. Copy the relevant file(s) into config/bootloaders/isolinux/ (this
+#      folder), preserving the same filename, so live-build uses YOUR
+#      version instead of its built-in default.
+#   3. Edit the LABEL stanzas to match the two entries below.
+#
+# The two important bits are the APPEND lines:
+#   - Daily Driver passes "persistence" so live-boot mounts your encrypted
+#     persistent partition (if one exists on the USB stick) and brings up
+#     normal networking.
+#   - Anonymous Mode passes "anon" (read by mode-init.service) and
+#     deliberately OMITS "persistence", so the session stays amnesic.
+
+LABEL daily
+  MENU LABEL Daily Driver (persistent, full network, gaming)
+  KERNEL /live/vmlinuz
+  APPEND initrd=/live/initrd.img boot=live components persistence quiet splash
+
+LABEL anon
+  MENU LABEL Anonymous Mode (Tor-only, amnesic, like Tails)
+  KERNEL /live/vmlinuz
+  APPEND initrd=/live/initrd.img boot=live components anon quiet splash
+
+DEFAULT daily
+PROMPT 1
+TIMEOUT 50

@@ -1,0 +1,13 @@
+[Unit]
+Description=Enable ufw on first real boot (cannot run inside the build chroot)
+After=network.target
+ConditionPathExists=!/etc/ufw-enabled-once
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/ufw --force enable
+ExecStartPost=/usr/bin/touch /etc/ufw-enabled-once
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

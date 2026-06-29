@@ -1,0 +1,15 @@
+#!/bin/sh
+set -e
+
+lb config noauto \
+    --distribution bookworm \
+    --architecture amd64 \
+    --archive-areas "main contrib non-free non-free-firmware" \
+    --binary-images iso-hybrid \
+    --bootloaders "syslinux,grub-efi" \
+    --debian-installer none \
+    --memtest none \
+    --apt-recommends true \
+    --firmware-chroot true \
+    --firmware-binary true \
+    "${@}"

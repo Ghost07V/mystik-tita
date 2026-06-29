@@ -1,0 +1,60 @@
+#!/bin/sh
+# /usr/local/sbin/mode-init
+#
+# Reads the kernel command line at boot. If it contains "anon", the system
+# locks itself into Tor-only networking (like Tails): MAC addresses are
+# randomized, all TCP is transparently redirected through Tor's TransPort,
+# all DNS through Tor's DNSPort, and anything that isn't Tor traffic is
+# rejected. No "persistence" param is passed on this boot entry, so the
+# live-boot persistence layer never mounts -- the session is amnesic.
+#
+# If "anon" is NOT present (the "Daily Driver" entry), this script does
+# nothing destructive: NetworkManager runs normally, and if the user added
+# "persistence" on that boot entry, live-boot mounts it as usual.
+
+CMDLINE="$(cat /proc/cmdline)"
+
+is_anon_mode() {
+    case " $CMDLINE " in
+        *' anon '*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+if is_anon_mode; then
+    echo "[mode-init] ANONYMOUS MODE: locking network to Tor only"
+
+    systemctl stop NetworkManager 2>/dev/null || true
+
+    # Randomize MAC on every real interface before anything connects.
+    for IFACE in $(ls /sys/class/net | grep -v '^lo$'); do
+        macchanger -r "$IFACE" 2>/dev/null || true
+    done
+
+    systemctl start tor
+    # Give tor a moment to open its listening ports.
+    for i in $(seq 1 10); do
+        ss -ltn 2>/dev/null | grep -q ':9040' && break
+        sleep 1
+    done
+
+    iptables -F
+    iptables -t nat -F
+
+    # Redirect DNS and all outbound TCP through Tor.
+    iptables -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports 5353
+    iptables -t nat -A OUTPUT -p tcp --syn -j REDIRECT --to-ports 9040
+
+    # Allow established/related and loopback, reject everything else outbound.
+    iptables -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+    iptables -A OUTPUT -o lo -j ACCEPT
+    iptables -A OUTPUT -j REJECT
+
+    systemctl start NetworkManager
+    echo anon > /run/mode-init.state
+else
+    echo "[mode-init] DAILY DRIVER MODE: normal networking, no Tor lockdown"
+    echo daily > /run/mode-init.state
+fi
+
+exit 0
